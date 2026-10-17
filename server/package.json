@@ -1,0 +1,21 @@
+{
+  "name": "examopt-server",
+  "version": "1.0.0",
+  "description": "Backend API & Constraint Scheduling Engine for ExamOpt AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "seed": "node src/database/seed.js",
+    "test": "node src/tests/run_all_tests.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.4.0",
+    "xlsx": "^0.18.5"
+  }
+}

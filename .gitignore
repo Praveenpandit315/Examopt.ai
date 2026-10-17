@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+*/dist/
+build/
+*/build/
+
+# Environment files and credentials
+.env
+.env.local
+.env.*.local
+*.env
+
+# SQLite runtime databases (seed.js generates fresh on setup)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+server/src/database/*.sqlite
+server/src/database/*.sqlite-wal
+server/src/database/*.sqlite-shm
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

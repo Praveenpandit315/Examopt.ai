@@ -1,0 +1,54 @@
+{
+  "system": "ExamOpt AI",
+  "hackathon": "GLA HackVision 2.0",
+  "team": "Commit2Win",
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "id": "scenario_a",
+      "name": "Scenario A — Normal Baseline",
+      "description": "Standard university setting with 12 exams, 6 rooms (including 2 computer labs), and 15 time slots over 5 days.",
+      "expectedOutcome": "Feasible 100% complete timetable with 0 hard conflicts.",
+      "roomsAvailable": 6,
+      "examsCount": 12,
+      "institutionalRules": {
+        "max_exams_per_day": 1,
+        "respect_lab_specs": true
+      }
+    },
+    {
+      "id": "scenario_b",
+      "name": "Scenario B — Restricted Resources",
+      "description": "Constrained environment where 2 lecture halls are decommissioned, leaving tight room availability.",
+      "expectedOutcome": "Valid alternative schedule utilizing computer labs for eligible non-lab exams where capacity permits.",
+      "roomsAvailable": 4,
+      "examsCount": 12
+    },
+    {
+      "id": "scenario_c",
+      "name": "Scenario C — Shared Student Clash",
+      "description": "Student Rahul Kumar and Priya Sharma are enrolled in both CS101 and CS102 with competing preferred morning slots.",
+      "expectedOutcome": "Constraint engine prevents overlapping time slots for CS101 and CS102, spacing them across consecutive days.",
+      "enrolledOverlaps": [
+        {
+          "student": "Rahul Kumar (CS-2024-042)",
+          "sharedExams": ["CS101", "CS102", "EC101", "MA101"]
+        }
+      ]
+    },
+    {
+      "id": "scenario_d",
+      "name": "Scenario D — Exam Rescue Mode",
+      "description": "Room R203 suffers sudden HVAC malfunction mid-session while hosting EC101.",
+      "expectedOutcome": "Emergency Rescue Engine reallocates EC101 to Room R102 while preserving all other 11 exam slots unchanged (91.6% timetable stability).",
+      "disruptionTarget": "R203"
+    },
+    {
+      "id": "scenario_e",
+      "name": "Scenario E — Impossible Constraints",
+      "description": "Two fixed examinations involving the same cohort are simultaneously locked into Room R101 at 09:00 AM on 15 Apr 2025.",
+      "expectedOutcome": "Engine halts immediately during Pre-Validation and outputs explainable Diagnostic Infeasibility Proof rather than fabricating an invalid schedule.",
+      "infeasibilityType": "DoubleLockedRoomConflict"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "examopt-ai",
+  "version": "1.0.0",
+  "description": "ExamOpt AI — Intelligent, Explainable & Adaptive Examination Timetable Optimization Platform",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "node start.js",
+    "server": "npm --prefix server start",
+    "client": "npm --prefix client dev",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server test",
+    "build": "npm --prefix client run build"
+  },
+  "keywords": [
+    "examination-timetable",
+    "constraint-satisfaction",
+    "optimization",
+    "react",
+    "express",
+    "sqlite"
+  ],
+  "author": "Team Commit2Win (GLA HackVision 2.0)",
+  "license": "MIT"
+}
