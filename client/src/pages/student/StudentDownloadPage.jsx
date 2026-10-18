@@ -12,31 +12,31 @@ export function StudentDownloadPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.student.getTimetable()
-      .then(res => {
-        if (res && res.timetable?.length > 0) {
-          setTimetable(res.timetable);
-          if (res.scheduleVersion) setScheduleVersion(res.scheduleVersion);
-        } else {
-          // Default realistic fallback
-          setTimetable([
-            { code: 'CS101', subject: 'Data Structures', date: '2025-04-15', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' },
-            { code: 'CS102', subject: 'Operating Systems', date: '2025-04-16', time: '12:00 - 14:00', duration: '120 min', room: 'R102', building: 'Block A - Lecture Hall 102' },
-            { code: 'EC101', subject: 'Electronics & Circuit Theory', date: '2025-04-17', time: '12:00 - 13:30', duration: '90 min', room: 'R203', building: 'Block B - Seminar Hall 203' },
-            { code: 'MA101', subject: 'Mathematics & Discrete', date: '2025-04-18', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' }
-          ]);
-        }
-      })
-      .catch(() => {
-        setTimetable([
-          { code: 'CS101', subject: 'Data Structures', date: '2025-04-15', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' },
-          { code: 'CS102', subject: 'Operating Systems', date: '2025-04-16', time: '12:00 - 14:00', duration: '120 min', room: 'R102', building: 'Block A - Lecture Hall 102' },
-          { code: 'EC101', subject: 'Electronics & Circuit Theory', date: '2025-04-17', time: '12:00 - 13:30', duration: '90 min', room: 'R203', building: 'Block B - Seminar Hall 203' },
-          { code: 'MA101', subject: 'Mathematics & Discrete', date: '2025-04-18', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' }
-        ]);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    const studentProfileId = user?.profile?.id || 1;
+    Promise.all([
+      api.student.getTimetable().catch(() => ({})),
+      api.seating.getHallTicket(studentProfileId).catch(() => ({}))
+    ]).then(([res, ticketRes]) => {
+      const tickets = ticketRes?.tickets || [];
+      const baseTimetable = res?.timetable?.length > 0 ? res.timetable : [
+        { code: 'CS101', subject: 'Data Structures', date: '2025-04-15', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' },
+        { code: 'CS102', subject: 'Operating Systems', date: '2025-04-16', time: '12:00 - 14:00', duration: '120 min', room: 'R102', building: 'Block A - Lecture Hall 102' },
+        { code: 'EC101', subject: 'Electronics & Circuit Theory', date: '2025-04-17', time: '12:00 - 13:30', duration: '90 min', room: 'R203', building: 'Block B - Seminar Hall 203' },
+        { code: 'MA101', subject: 'Mathematics & Discrete', date: '2025-04-18', time: '09:00 - 11:00', duration: '120 min', room: 'R101', building: 'Block A - Lecture Hall 101' }
+      ];
+
+      const merged = baseTimetable.map(t => {
+        const match = tickets.find(ticket => ticket.subject_code === t.code || ticket.exam_code === t.code);
+        return {
+          ...t,
+          seat_label: match?.seat_label || t.seat_label || 'Desk Pending'
+        };
+      });
+
+      setTimetable(merged);
+      if (res?.scheduleVersion) setScheduleVersion(res.scheduleVersion);
+    }).finally(() => setLoading(false));
+  }, [user]);
 
   const handleExportCSV = () => {
     const sanitize = (val) => {
@@ -52,7 +52,7 @@ export function StudentDownloadPage() {
       ['Semester', user?.profile?.semester || '3'],
       ['Section', user?.profile?.section || 'A'],
       [],
-      ['Paper Code', 'Subject Name', 'Date', 'Time Slot', 'Duration', 'Allocated Venue']
+      ['Paper Code', 'Subject Name', 'Date', 'Time Slot', 'Duration', 'Allocated Venue', 'Allocated Desk']
     ];
 
     timetable.forEach(t => {
@@ -62,7 +62,8 @@ export function StudentDownloadPage() {
         t.date,
         t.time,
         t.duration,
-        `${t.room} (${t.building})`
+        `${t.room} (${t.building})`,
+        t.seat_label || 'Pending'
       ]);
     });
 
@@ -150,6 +151,7 @@ export function StudentDownloadPage() {
                 <th className="p-3">Date</th>
                 <th className="p-3">Time Slot</th>
                 <th className="p-3">Allocated Venue</th>
+                <th className="p-3 font-mono text-blue-700">Allocated Desk</th>
                 <th className="p-3 text-center">Invigilator Sign</th>
               </tr>
             </thead>
@@ -163,6 +165,9 @@ export function StudentDownloadPage() {
                   <td className="p-3">
                     <span className="font-bold text-slate-900 block">{t.room}</span>
                     <span className="text-[10px] text-slate-400">{t.building}</span>
+                  </td>
+                  <td className="p-3 font-mono font-bold text-blue-700">
+                    {t.seat_label || 'Desk Pending'}
                   </td>
                   <td className="p-3 text-center text-slate-300 font-mono">_______________</td>
                 </tr>

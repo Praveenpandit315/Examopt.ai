@@ -39,6 +39,15 @@ export function AuthProvider({ children }) {
     return res.user;
   };
 
+  const loginWithFirebase = async (idToken, role) => {
+    const res = await api.auth.firebaseLogin({ idToken, role });
+    localStorage.setItem('examopt_token', res.token);
+    localStorage.setItem('examopt_user', JSON.stringify(res.user));
+    setToken(res.token);
+    setUser(res.user);
+    return res.user;
+  };
+
   const logout = () => {
     localStorage.removeItem('examopt_token');
     localStorage.removeItem('examopt_user');
@@ -47,7 +56,17 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, isAuthenticated: !!user, isAdmin: user?.role === 'admin', isStudent: user?.role === 'student' }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      loginWithFirebase, 
+      logout, 
+      loading, 
+      isAuthenticated: !!user, 
+      isAdmin: user?.role === 'admin', 
+      isStudent: user?.role === 'student' 
+    }}>
       {children}
     </AuthContext.Provider>
   );

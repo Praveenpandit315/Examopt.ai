@@ -3,13 +3,15 @@
 
 PRAGMA foreign_keys = ON;
 
--- 1. Users & Authentication
+-- 1. Users & Authentication (Supports Firebase UID & Role Authorization)
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('admin', 'student')),
     full_name TEXT NOT NULL,
+    firebase_uid TEXT UNIQUE DEFAULT NULL,
+    account_status TEXT NOT NULL DEFAULT 'active' CHECK(account_status IN ('active', 'suspended', 'pending')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -105,8 +107,7 @@ CREATE TABLE IF NOT EXISTS subjects (
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
 );
 
--- 10. Student Course / Paper Enrollments (Actual Individual Registration)
--- Distinct from exam session schedule assignments
+-- 10. Student Course / Paper Enrollments (Individual Registration)
 CREATE TABLE IF NOT EXISTS student_course_enrollments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     student_profile_id INTEGER NOT NULL,
@@ -119,19 +120,45 @@ CREATE TABLE IF NOT EXISTS student_course_enrollments (
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 );
 
--- 11. Examination Venues & Rooms
-CREATE TABLE IF NOT EXISTS rooms (
+-- 11. University Blocks / Campus Buildings
+CREATE TABLE IF NOT EXISTS university_blocks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
-    building TEXT NOT NULL,
-    room_name TEXT NOT NULL,
-    room_type TEXT NOT NULL CHECK(room_type IN ('classroom', 'computer_lab', 'specialized')),
-    capacity INTEGER NOT NULL CHECK(capacity > 0),
+    name TEXT NOT NULL,
+    campus_zone TEXT DEFAULT 'Main Campus',
+    total_floors INTEGER DEFAULT 4,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 12. Room Unavailability (Maintenance / Blackout Windows)
+-- 12. Examination Venues & Rooms
+CREATE TABLE IF NOT EXISTS rooms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    building TEXT NOT NULL,
+    block_id INTEGER DEFAULT NULL,
+    room_name TEXT NOT NULL,
+    room_type TEXT NOT NULL CHECK(room_type IN ('classroom', 'computer_lab', 'specialized')),
+    capacity INTEGER NOT NULL CHECK(capacity > 0),
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (block_id) REFERENCES university_blocks(id) ON DELETE SET NULL
+);
+
+-- 13. Physical Room Seats (Seat Layouts)
+CREATE TABLE IF NOT EXISTS room_seats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL,
+    seat_number TEXT NOT NULL, -- e.g. 'R101-A01'
+    row_label TEXT NOT NULL,   -- e.g. 'A'
+    column_index INTEGER NOT NULL, -- e.g. 1
+    is_functional INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(room_id, seat_number),
+    FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+);
+
+-- 14. Room Unavailability (Maintenance / Blackout Windows)
 CREATE TABLE IF NOT EXISTS room_unavailability (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room_id INTEGER NOT NULL,
@@ -142,7 +169,7 @@ CREATE TABLE IF NOT EXISTS room_unavailability (
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
--- 13. Exam Time Slots & Institutional Windows
+-- 15. Exam Time Slots & Institutional Windows
 CREATE TABLE IF NOT EXISTS exam_time_slots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slot_name TEXT NOT NULL,
@@ -154,7 +181,17 @@ CREATE TABLE IF NOT EXISTS exam_time_slots (
     UNIQUE(date, start_time, end_time)
 );
 
--- 14. Exam Sessions (Scope Configuration for Scheduling)
+-- 16. Named Session Presets (Regular Semester, Mid-Semester, Practical, Custom)
+CREATE TABLE IF NOT EXISTS session_presets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    preset_name TEXT UNIQUE NOT NULL,
+    preset_type TEXT NOT NULL CHECK(preset_type IN ('regular', 'mid_term', 'practical', 'custom')),
+    description TEXT DEFAULT '',
+    config_json TEXT NOT NULL DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. Exam Sessions (Scope Configuration for Scheduling)
 CREATE TABLE IF NOT EXISTS exam_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_code TEXT UNIQUE NOT NULL,
@@ -162,16 +199,25 @@ CREATE TABLE IF NOT EXISTS exam_sessions (
     academic_term TEXT NOT NULL,
     start_date TEXT NOT NULL,
     end_date TEXT NOT NULL,
-    departments_filter TEXT DEFAULT '[]', -- JSON string of department codes
-    programs_filter TEXT DEFAULT '[]',    -- JSON string of program codes
-    semesters_filter TEXT DEFAULT '[]',   -- JSON string of semester numbers
+    departments_filter TEXT DEFAULT '[]', -- JSON array of department codes
+    programs_filter TEXT DEFAULT '[]',    -- JSON array of program codes
+    semesters_filter TEXT DEFAULT '[]',   -- JSON array of semester numbers
+    allowed_blocks_filter TEXT DEFAULT '[]', -- JSON array of block codes
+    daily_start_time TEXT DEFAULT '09:00',
+    daily_end_time TEXT DEFAULT '17:00',
+    slot_duration_minutes INTEGER DEFAULT 120,
+    break_duration_minutes INTEGER DEFAULT 30,
+    allowed_days TEXT DEFAULT '["Mon","Tue","Wed","Thu","Fri","Sat"]',
+    is_deadline_mandatory INTEGER NOT NULL DEFAULT 0,
+    preset_id INTEGER DEFAULT NULL,
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'configured', 'scheduled', 'published', 'archived')),
     published_schedule_id INTEGER DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (preset_id) REFERENCES session_presets(id) ON DELETE SET NULL,
     FOREIGN KEY (published_schedule_id) REFERENCES schedule_versions(id) ON DELETE SET NULL
 );
 
--- 15. Scheduled Examinations / Papers
+-- 18. Scheduled Examinations / Papers
 CREATE TABLE IF NOT EXISTS examinations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT UNIQUE NOT NULL,
@@ -180,6 +226,7 @@ CREATE TABLE IF NOT EXISTS examinations (
     semester INTEGER NOT NULL,
     duration_minutes INTEGER NOT NULL DEFAULT 120,
     required_room_type TEXT NOT NULL DEFAULT 'classroom' CHECK(required_room_type IN ('classroom', 'computer_lab', 'specialized')),
+    block_id INTEGER DEFAULT NULL,
     fixed_date TEXT DEFAULT NULL,
     fixed_start_time TEXT DEFAULT NULL,
     fixed_room_id INTEGER DEFAULT NULL,
@@ -187,11 +234,12 @@ CREATE TABLE IF NOT EXISTS examinations (
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    FOREIGN KEY (block_id) REFERENCES university_blocks(id) ON DELETE SET NULL,
     FOREIGN KEY (fixed_room_id) REFERENCES rooms(id) ON DELETE SET NULL,
     FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE SET NULL
 );
 
--- 16. Exam - Group Associations (Many-to-Many)
+-- 19. Exam - Group Associations (Many-to-Many)
 CREATE TABLE IF NOT EXISTS exam_group_relations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exam_id INTEGER NOT NULL,
@@ -201,7 +249,7 @@ CREATE TABLE IF NOT EXISTS exam_group_relations (
     FOREIGN KEY (group_id) REFERENCES student_groups(id) ON DELETE CASCADE
 );
 
--- 17. Individual Student Enrollments in Exams (Legacy & Active)
+-- 20. Individual Student Enrollments in Exams
 CREATE TABLE IF NOT EXISTS exam_enrollments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     exam_id INTEGER NOT NULL,
@@ -211,7 +259,7 @@ CREATE TABLE IF NOT EXISTS exam_enrollments (
     FOREIGN KEY (student_id) REFERENCES student_profiles(id) ON DELETE CASCADE
 );
 
--- 18. Institutional Rules & Constraints Configuration
+-- 21. Institutional Rules & Constraints Configuration
 CREATE TABLE IF NOT EXISTS institutional_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     rule_key TEXT UNIQUE NOT NULL,
@@ -221,7 +269,7 @@ CREATE TABLE IF NOT EXISTS institutional_rules (
     is_active INTEGER NOT NULL DEFAULT 1
 );
 
--- 19. Schedule Versions (Draft, Approved, Published, Archived)
+-- 22. Schedule Versions (Draft, Approved, Published, Archived)
 CREATE TABLE IF NOT EXISTS schedule_versions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     version_code TEXT UNIQUE NOT NULL,
@@ -242,7 +290,7 @@ CREATE TABLE IF NOT EXISTS schedule_versions (
     FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE SET NULL
 );
 
--- 20. Schedule Assignments
+-- 23. Schedule Assignments
 CREATE TABLE IF NOT EXISTS schedule_assignments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schedule_version_id INTEGER NOT NULL,
@@ -259,12 +307,27 @@ CREATE TABLE IF NOT EXISTS schedule_assignments (
     FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
--- 21. Scheduling Conflict Logs & Diagnostics
+-- 24. Individual Student Seat Allocations (Post-Scheduling)
+CREATE TABLE IF NOT EXISTS student_seat_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schedule_assignment_id INTEGER NOT NULL,
+    student_profile_id INTEGER NOT NULL,
+    seat_id INTEGER NOT NULL,
+    seat_label TEXT NOT NULL,
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(schedule_assignment_id, student_profile_id),
+    UNIQUE(schedule_assignment_id, seat_id),
+    FOREIGN KEY (schedule_assignment_id) REFERENCES schedule_assignments(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_profile_id) REFERENCES student_profiles(id) ON DELETE CASCADE,
+    FOREIGN KEY (seat_id) REFERENCES room_seats(id) ON DELETE CASCADE
+);
+
+-- 25. Scheduling Conflict Logs & Diagnostics
 CREATE TABLE IF NOT EXISTS scheduling_conflicts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schedule_version_id INTEGER NOT NULL,
     conflict_code TEXT NOT NULL,
-    conflict_type TEXT NOT NULL, -- 'shared_student', 'room_double_booked', 'capacity_exceeded', 'wrong_room_type', 'room_unavailable', 'blocked_slot', 'fixed_exam_violation'
+    conflict_type TEXT NOT NULL,
     severity TEXT NOT NULL CHECK(severity IN ('high', 'medium', 'low')),
     affected_exam_ids_json TEXT NOT NULL DEFAULT '[]',
     affected_room_id INTEGER DEFAULT NULL,
@@ -278,7 +341,7 @@ CREATE TABLE IF NOT EXISTS scheduling_conflicts (
     FOREIGN KEY (affected_group_id) REFERENCES student_groups(id) ON DELETE SET NULL
 );
 
--- 22. In-App Notifications
+-- 26. In-App Notifications
 CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER DEFAULT NULL, -- NULL = broadcast to all users
@@ -290,7 +353,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 23. University Data Hub: Import Batches (Staging & History)
+-- 27. University Data Hub: Import Batches
 CREATE TABLE IF NOT EXISTS data_import_batches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     batch_code TEXT UNIQUE NOT NULL,
@@ -308,7 +371,7 @@ CREATE TABLE IF NOT EXISTS data_import_batches (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 24. University Data Hub: Staging Records
+-- 28. University Data Hub: Staging Records
 CREATE TABLE IF NOT EXISTS data_import_staging (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     batch_id INTEGER NOT NULL,
@@ -320,7 +383,7 @@ CREATE TABLE IF NOT EXISTS data_import_staging (
     FOREIGN KEY (batch_id) REFERENCES data_import_batches(id) ON DELETE CASCADE
 );
 
--- 25. University Data Hub: Saved Column Mappings
+-- 29. University Data Hub: Saved Column Mappings
 CREATE TABLE IF NOT EXISTS import_column_mappings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     entity_type TEXT NOT NULL,
@@ -328,6 +391,19 @@ CREATE TABLE IF NOT EXISTS import_column_mappings (
     target_field TEXT NOT NULL,
     is_saved_template INTEGER NOT NULL DEFAULT 1,
     UNIQUE(entity_type, source_column)
+);
+
+-- 30. Audit Logs & Publication History
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER DEFAULT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT DEFAULT NULL,
+    details_json TEXT DEFAULT '{}',
+    ip_address TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Performance Indexes
@@ -343,3 +419,6 @@ CREATE INDEX IF NOT EXISTS idx_departments_code ON departments(code);
 CREATE INDEX IF NOT EXISTS idx_programs_code ON academic_programs(code);
 CREATE INDEX IF NOT EXISTS idx_faculty_code ON faculty(code);
 CREATE INDEX IF NOT EXISTS idx_exam_sessions_code ON exam_sessions(session_code);
+CREATE INDEX IF NOT EXISTS idx_seats_room ON room_seats(room_id);
+CREATE INDEX IF NOT EXISTS idx_student_seats_assign ON student_seat_assignments(schedule_assignment_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);

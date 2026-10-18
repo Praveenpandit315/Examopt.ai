@@ -22,6 +22,10 @@ import { PublishReportsPage } from './pages/admin/PublishReportsPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
 import { UniversityDataHubPage } from './pages/admin/UniversityDataHubPage';
 import { ExamSessionBuilderPage } from './pages/admin/ExamSessionBuilderPage';
+import { AcademicDataManagementPage } from './pages/admin/AcademicDataManagementPage';
+import { SeatAllocationPage } from './pages/admin/SeatAllocationPage';
+import { ScheduleHistoryPage } from './pages/admin/ScheduleHistoryPage';
+import { AICopilotPage } from './pages/admin/AICopilotPage';
 
 // Student Pages
 import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
@@ -89,7 +93,11 @@ export default function App() {
             <Route path="rescue" element={<ExamRescuePage />} />
             <Route path="publish" element={<PublishReportsPage />} />
             <Route path="data-hub" element={<UniversityDataHubPage />} />
+            <Route path="academic-data" element={<AcademicDataManagementPage />} />
             <Route path="session-builder" element={<ExamSessionBuilderPage />} />
+            <Route path="seating" element={<SeatAllocationPage />} />
+            <Route path="history" element={<ScheduleHistoryPage />} />
+            <Route path="ai-copilot" element={<AICopilotPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

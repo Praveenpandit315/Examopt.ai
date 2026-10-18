@@ -40,6 +40,7 @@ export const api = {
   // Authentication
   auth: {
     login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+    firebaseLogin: (payload) => request('/auth/firebase-login', { method: 'POST', body: JSON.stringify(payload) }),
     getMe: () => request('/auth/me'),
     getDemoAccounts: () => request('/auth/demo-accounts'),
   },
@@ -141,5 +142,61 @@ export const api = {
   // AI Scheduling Copilot (Phase 5)
   ai: {
     ask: (query) => request('/ai/ask', { method: 'POST', body: JSON.stringify({ query }) }),
+  },
+
+  // Academic Data Management (Phase 2)
+  academic: {
+    getSummary: () => request('/academic/summary'),
+    getDepartments: () => request('/academic/departments'),
+    createDepartment: (data) => request('/academic/departments', { method: 'POST', body: JSON.stringify(data) }),
+    updateDepartment: (id, data) => request(`/academic/departments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteDepartment: (id) => request(`/academic/departments/${id}`, { method: 'DELETE' }),
+    getPrograms: () => request('/academic/programs'),
+    createProgram: (data) => request('/academic/programs', { method: 'POST', body: JSON.stringify(data) }),
+    updateProgram: (id, data) => request(`/academic/programs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteProgram: (id) => request(`/academic/programs/${id}`, { method: 'DELETE' }),
+    getSubjects: () => request('/academic/subjects'),
+    createSubject: (data) => request('/academic/subjects', { method: 'POST', body: JSON.stringify(data) }),
+    updateSubject: (id, data) => request(`/academic/subjects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteSubject: (id) => request(`/academic/subjects/${id}`, { method: 'DELETE' }),
+    getFaculty: () => request('/academic/faculty'),
+    createFaculty: (data) => request('/academic/faculty', { method: 'POST', body: JSON.stringify(data) }),
+    updateFaculty: (id, data) => request(`/academic/faculty/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteFaculty: (id) => request(`/academic/faculty/${id}`, { method: 'DELETE' }),
+    getFacultyAvailability: (facultyId) => request(`/academic/faculty-availability${facultyId ? `?facultyId=${facultyId}` : ''}`),
+    addFacultyAvailability: (data) => request('/academic/faculty-availability', { method: 'POST', body: JSON.stringify(data) }),
+    deleteFacultyAvailability: (id) => request(`/academic/faculty-availability/${id}`, { method: 'DELETE' }),
+    getBlocks: () => request('/academic/blocks'),
+    createBlock: (data) => request('/academic/blocks', { method: 'POST', body: JSON.stringify(data) }),
+    updateBlock: (id, data) => request(`/academic/blocks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteBlock: (id) => request(`/academic/blocks/${id}`, { method: 'DELETE' }),
+  },
+
+  // Exam Presets & Configs (Phase 3)
+  presets: {
+    getAll: () => request('/presets'),
+    getById: (id) => request(`/presets/${id}`),
+    create: (data) => request('/presets', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/presets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => request(`/presets/${id}`, { method: 'DELETE' }),
+  },
+
+  // Seating Allocation (Phase 4)
+  seating: {
+    allocate: (scheduleId, options = {}) => request(`/seating/allocate/${scheduleId}`, { method: 'POST', body: JSON.stringify(options) }),
+    getSummary: (scheduleId) => request(`/seating/schedule/${scheduleId}`),
+    getAssignment: (assignmentId) => request(`/seating/assignment/${assignmentId}`),
+    reassign: (data) => request('/seating/reassign', { method: 'PUT', body: JSON.stringify(data) }),
+    getHallTicket: (studentProfileId) => request(`/seating/hall-ticket/${studentProfileId}`),
+  },
+
+  // Schedule History & Audit Logs (Phase 5)
+  history: {
+    getVersions: () => request('/history/versions'),
+    getDiff: (v1, v2) => request(`/history/compare?v1=${v1}&v2=${v2}`),
+    getAuditLogs: (params = {}) => {
+      const q = new URLSearchParams(params).toString();
+      return request(`/history/audit-logs${q ? `?${q}` : ''}`);
+    },
   },
 };

@@ -1,5 +1,5 @@
 // client/src/pages/admin/ExamSessionBuilderPage.jsx
-// Exam Session Builder: Configure scoped exam sessions and auto-populate papers, students, and venues
+// Exam Session Builder: Configure scoped exam sessions and auto-populate papers, students, venues, and presets
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,13 +19,22 @@ import {
   GraduationCap, 
   Plus, 
   RefreshCw,
-  Cpu
+  Cpu,
+  BookmarkCheck,
+  Save,
+  Check
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Toast } from '../../components/Toast';
 
 export function ExamSessionBuilderPage() {
   const navigate = useNavigate();
+
+  // Presets & Blocks State
+  const [presets, setPresets] = useState([]);
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [availableBlocks, setAvailableBlocks] = useState([]);
+  const [selectedBlocks, setSelectedBlocks] = useState([]);
 
   // Form State
   const [sessionName, setSessionName] = useState('BCA Odd Semester Examinations 2026');
@@ -35,14 +44,19 @@ export function ExamSessionBuilderPage() {
   const [selectedSemesters, setSelectedSemesters] = useState([3]);
   const [startDate, setStartDate] = useState('2026-04-14');
   const [endDate, setEndDate] = useState('2026-04-18');
+  const [dailyStartTime, setDailyStartTime] = useState('09:00');
+  const [dailyEndTime, setDailyEndTime] = useState('17:00');
+  const [slotDuration, setSlotDuration] = useState(120);
+  const [breakDuration, setBreakDuration] = useState(30);
+  const [isDeadlineMandatory, setIsDeadlineMandatory] = useState(true);
   const [strategy, setStrategy] = useState('smart_backtracking');
 
   // Preview & Engine State
   const [previewData, setPreviewData] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [savingPreset, setSavingPreset] = useState(false);
   const [savedSessions, setSavedSessions] = useState([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'info' });
 
   const AVAILABLE_DEPTS = ['BCA', 'CSE', 'MATH', 'ECE'];
@@ -50,9 +64,78 @@ export function ExamSessionBuilderPage() {
   const AVAILABLE_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
   useEffect(() => {
-    fetchScopePreview();
+    loadPresetsAndBlocks();
     fetchSavedSessions();
-  }, [academicTerm, selectedDepts, selectedPrograms, selectedSemesters]);
+  }, []);
+
+  useEffect(() => {
+    fetchScopePreview();
+  }, [academicTerm, selectedDepts, selectedPrograms, selectedSemesters, selectedBlocks]);
+
+  const loadPresetsAndBlocks = async () => {
+    try {
+      const [presetsRes, blocksRes] = await Promise.all([
+        api.presets.getAll().catch(() => ({ presets: [] })),
+        api.academic.getBlocks().catch(() => ({ blocks: [] }))
+      ]);
+      setPresets(presetsRes.presets || []);
+      setAvailableBlocks(blocksRes.blocks || []);
+    } catch (err) {
+      console.error('Failed to load presets or blocks:', err);
+    }
+  };
+
+  const applyPreset = (preset) => {
+    setSelectedPresetId(preset.id);
+    const cfg = preset.config || {};
+    if (preset.preset_name) setSessionName(preset.preset_name);
+    if (cfg.academic_term) setAcademicTerm(cfg.academic_term);
+    if (cfg.departments) setSelectedDepts(cfg.departments);
+    if (cfg.programs) setSelectedPrograms(cfg.programs);
+    if (cfg.semesters) setSelectedSemesters(cfg.semesters);
+    if (cfg.daily_start_time) setDailyStartTime(cfg.daily_start_time);
+    if (cfg.daily_end_time) setDailyEndTime(cfg.daily_end_time);
+    if (cfg.slot_duration_minutes) setSlotDuration(cfg.slot_duration_minutes);
+    if (cfg.break_duration_minutes) setBreakDuration(cfg.break_duration_minutes);
+    if (cfg.is_deadline_mandatory !== undefined) setIsDeadlineMandatory(cfg.is_deadline_mandatory);
+    
+    setToast({
+      message: `Loaded Preset: "${preset.preset_name}"`,
+      type: 'success'
+    });
+  };
+
+  const handleSaveAsPreset = async () => {
+    const presetName = prompt('Enter a name for this session preset:', sessionName);
+    if (!presetName) return;
+
+    setSavingPreset(true);
+    try {
+      await api.presets.create({
+        preset_name: presetName,
+        preset_type: 'custom',
+        description: `Custom university session configuration for ${academicTerm}`,
+        config: {
+          academic_term: academicTerm,
+          departments: selectedDepts,
+          programs: selectedPrograms,
+          semesters: selectedSemesters,
+          allowed_blocks: selectedBlocks,
+          daily_start_time: dailyStartTime,
+          daily_end_time: dailyEndTime,
+          slot_duration_minutes: slotDuration,
+          break_duration_minutes: breakDuration,
+          is_deadline_mandatory: isDeadlineMandatory
+        }
+      });
+      setToast({ message: `Preset "${presetName}" saved successfully!`, type: 'success' });
+      loadPresetsAndBlocks();
+    } catch (err) {
+      setToast({ message: 'Failed to save preset: ' + err.message, type: 'error' });
+    } finally {
+      setSavingPreset(false);
+    }
+  };
 
   const fetchScopePreview = async () => {
     setLoadingPreview(true);
@@ -61,7 +144,8 @@ export function ExamSessionBuilderPage() {
         academicTerm,
         departments: selectedDepts.join(','),
         programs: selectedPrograms.join(','),
-        semesters: selectedSemesters.join(',')
+        semesters: selectedSemesters.join(','),
+        blocks: selectedBlocks.join(',')
       });
       setPreviewData(res);
     } catch (err) {
@@ -72,14 +156,11 @@ export function ExamSessionBuilderPage() {
   };
 
   const fetchSavedSessions = async () => {
-    setLoadingSessions(true);
     try {
       const res = await api.sessions.getAll();
       setSavedSessions(res.sessions || []);
     } catch (err) {
       console.error('Failed to load sessions:', err);
-    } finally {
-      setLoadingSessions(false);
     }
   };
 
@@ -101,6 +182,12 @@ export function ExamSessionBuilderPage() {
     );
   };
 
+  const toggleBlock = (blockCode) => {
+    setSelectedBlocks(prev => 
+      prev.includes(blockCode) ? prev.filter(b => b !== blockCode) : [...prev, blockCode]
+    );
+  };
+
   const handleGenerateForSession = async () => {
     if (!sessionName || !startDate || !endDate) {
       setToast({ message: 'Please complete session name and exam date range', type: 'error' });
@@ -109,7 +196,6 @@ export function ExamSessionBuilderPage() {
 
     setGenerating(true);
     try {
-      // 1. Create or save session
       const createRes = await api.sessions.create({
         name: sessionName,
         academicTerm,
@@ -118,10 +204,15 @@ export function ExamSessionBuilderPage() {
         departments: selectedDepts,
         programs: selectedPrograms,
         semesters: selectedSemesters,
+        allowedBlocks: selectedBlocks,
+        dailyStartTime,
+        dailyEndTime,
+        slotDuration,
+        breakDuration,
+        isDeadlineMandatory,
         selectedPaperIds: previewData?.eligiblePapers?.map(p => p.id) || []
       });
 
-      // 2. Generate timetable scoped to session
       const genRes = await api.sessions.generate(createRes.sessionId, strategy);
       setToast({
         message: `Generated timetable for ${sessionName}: ${genRes.scheduled}/${genRes.totalExams} scheduled in ${genRes.executionTime}`,
@@ -152,7 +243,7 @@ export function ExamSessionBuilderPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Exam Session Builder</h1>
             <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
-              Scoped Scheduling
+              Scoped Scheduling & Presets
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -160,15 +251,67 @@ export function ExamSessionBuilderPage() {
           </p>
         </div>
 
-        <button
-          onClick={fetchScopePreview}
-          disabled={loadingPreview}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition shadow-sm self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingPreview ? 'animate-spin text-blue-600' : ''}`} />
-          <span>Refresh Scope</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveAsPreset}
+            disabled={savingPreset}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition shadow-xs"
+          >
+            <BookmarkCheck className="w-3.5 h-3.5 text-blue-600" />
+            <span>Save Preset</span>
+          </button>
+          <button
+            onClick={fetchScopePreview}
+            disabled={loadingPreview}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition shadow-xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingPreview ? 'animate-spin text-blue-600' : ''}`} />
+            <span>Refresh Scope</span>
+          </button>
+        </div>
       </div>
+
+      {/* Reusable Presets Picker */}
+      {presets.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-5 text-white shadow-md">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <BookmarkCheck className="w-4 h-4 text-blue-300" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-blue-200">
+                Institutional Configuration Presets
+              </h2>
+            </div>
+            <span className="text-[11px] text-blue-300/80">Click any preset to auto-configure this session</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+            {presets.map(p => {
+              const isSelected = selectedPresetId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => applyPreset(p)}
+                  className={`p-3.5 rounded-2xl text-left border transition-all ${
+                    isSelected 
+                      ? 'bg-blue-600/80 border-blue-400 shadow-md ring-2 ring-blue-300/50' 
+                      : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white">{p.preset_name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-200" />}
+                  </div>
+                  <p className="text-[10px] text-blue-200/80 mt-1 line-clamp-1">{p.description}</p>
+                  <div className="mt-2 flex items-center gap-2 text-[10px] text-blue-300 font-mono">
+                    <span className="bg-black/30 px-2 py-0.5 rounded-md">{p.config?.academic_term || 'Term'}</span>
+                    <span>{p.config?.daily_start_time || '09:00'} - {p.config?.daily_end_time || '17:00'}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Scope Configuration Form (5 cols) */}
@@ -274,6 +417,33 @@ export function ExamSessionBuilderPage() {
               </div>
             </div>
 
+            {/* University Blocks Pool */}
+            {availableBlocks.length > 0 && (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Available Campus Blocks</span>
+                  <span className="text-[10px] text-slate-400">All allowed if none checked</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableBlocks.map(blk => (
+                    <button
+                      key={blk.code}
+                      type="button"
+                      onClick={() => toggleBlock(blk.code)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                        selectedBlocks.includes(blk.code)
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <Building className="w-3 h-3" />
+                      <span>{blk.code}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Examination Date Range */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
@@ -294,6 +464,49 @@ export function ExamSessionBuilderPage() {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
               </div>
+            </div>
+
+            {/* Daily Hours & Durations */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Daily Hours</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="time"
+                    value={dailyStartTime}
+                    onChange={(e) => setDailyStartTime(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px]"
+                  />
+                  <span className="text-slate-400">-</span>
+                  <input
+                    type="time"
+                    value={dailyEndTime}
+                    onChange={(e) => setDailyEndTime(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Slot & Break</label>
+                <div className="flex items-center gap-1 text-[11px] font-mono">
+                  <span className="px-2 py-1.5 bg-slate-100 rounded-lg border border-slate-200">{slotDuration}m Exam</span>
+                  <span className="px-2 py-1.5 bg-slate-100 rounded-lg border border-slate-200">{breakDuration}m Rest</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Strict Deadline Toggle */}
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+              <input
+                type="checkbox"
+                id="deadlineMandatory"
+                checked={isDeadlineMandatory}
+                onChange={(e) => setIsDeadlineMandatory(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+              />
+              <label htmlFor="deadlineMandatory" className="text-slate-700 text-[11px] font-medium cursor-pointer">
+                Strict Completion Deadline (Do not allow overflow beyond End Date)
+              </label>
             </div>
 
             {/* Scheduling Strategy Switcher */}

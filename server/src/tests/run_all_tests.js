@@ -6,6 +6,7 @@ const { runCrossDeptClashTests } = require('./test_cross_dept_clash.js');
 const { runSessionBuilderTests } = require('./test_session_builder.js');
 const { testFullWorkflow } = require('./test_full_workflow.js');
 const { testAICopilot } = require('./test_ai_copilot.js');
+const { runAcademicSeatingHistoryTests } = require('./test_academic_seating_history.js');
 
 async function runAll() {
   console.log('🏁 EXAMOPT AI — MASTER TEST SUITE RUNNER');
@@ -16,11 +17,12 @@ async function runAll() {
   await runDataHubTests();
   await runCrossDeptClashTests();
   await runSessionBuilderTests();
+  await runAcademicSeatingHistoryTests();
   await testFullWorkflow();
   await testAICopilot();
 
   console.log('\n====================================================');
-  console.log('🏆 ALL 7 MASTER TEST SUITES EXECUTED AND PASSED CLEANLY! 🚀');
+  console.log('🏆 ALL 8 MASTER TEST SUITES EXECUTED AND PASSED CLEANLY! 🚀');
   console.log('====================================================');
 }
 

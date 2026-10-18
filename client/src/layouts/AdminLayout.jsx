@@ -17,7 +17,11 @@ import {
   LogOut,
   Calendar,
   UploadCloud,
-  CalendarRange
+  CalendarRange,
+  Building2,
+  Armchair,
+  History,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AICopilotDrawer } from '../components/AICopilotDrawer';
@@ -35,16 +39,18 @@ export function AdminLayout() {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'University Data Hub', path: '/admin/data-hub', icon: UploadCloud },
+    { name: 'Academic Data Hub', path: '/admin/academic-data', icon: Building2 },
     { name: 'Session Builder', path: '/admin/session-builder', icon: CalendarRange },
-    { name: 'Examinations', path: '/admin/examinations', icon: FileText },
-    { name: 'Student Groups', path: '/admin/groups', icon: Users },
-    { name: 'Rooms', path: '/admin/rooms', icon: DoorOpen },
-    { name: 'Dates & Slots', path: '/admin/slots', icon: CalendarClock },
     { name: 'Generate Timetable', path: '/admin/generate', icon: Cpu },
+    { name: 'Seat Allocation', path: '/admin/seating', icon: Armchair },
     { name: 'Conflict Analysis', path: '/admin/conflicts', icon: AlertTriangle },
     { name: 'Optimization Lab', path: '/admin/optimization-lab', icon: FlaskConical },
     { name: 'Exam Rescue', path: '/admin/rescue', icon: LifeBuoy },
+    { name: 'AI Copilot', path: '/admin/ai-copilot', icon: Sparkles },
     { name: 'Publish & Reports', path: '/admin/publish', icon: Send },
+    { name: 'Schedule History', path: '/admin/history', icon: History },
+    { name: 'Examinations', path: '/admin/examinations', icon: FileText },
+    { name: 'Rooms & Venues', path: '/admin/rooms', icon: DoorOpen },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 

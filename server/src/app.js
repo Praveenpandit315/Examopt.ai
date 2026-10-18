@@ -14,6 +14,10 @@ const studentRoutes = require('./routes/student.routes');
 const aiRoutes = require('./routes/ai.routes');
 const dataHubRoutes = require('./routes/dataHub.routes');
 const sessionsRoutes = require('./routes/sessions.routes');
+const academicRoutes = require('./routes/academic.routes');
+const presetsRoutes = require('./routes/presets.routes');
+const seatingRoutes = require('./routes/seating.routes');
+const historyRoutes = require('./routes/history.routes');
 
 const app = express();
 
@@ -51,6 +55,10 @@ app.use('/api/student', studentRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/data-hub', dataHubRoutes);
 app.use('/api/sessions', sessionsRoutes);
+app.use('/api/academic', academicRoutes);
+app.use('/api/presets', presetsRoutes);
+app.use('/api/seating', seatingRoutes);
+app.use('/api/history', historyRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
