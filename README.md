@@ -1,11 +1,26 @@
-# ExamOpt AI — Team Commit2Win
-### Intelligent, Explainable & Adaptive Examination Timetable Optimization Platform
-**GLA HackVision 2.0 — Problem Statement C10: Intelligent Examination Timetable Optimization System**
+<div align="center">
 
-> **Tagline:** Generate. Optimize. Explain. Reschedule.
+# 🎓 ExamOpt AI
+
+### Intelligent • Explainable • Adaptive Examination Scheduling
+
+**Generate. Optimize. Explain. Reschedule.**
+
+**Built by Team Commit2Win for GLA HackVision 2.0 — Problem Statement C10**
+
+![React](https://img.shields.io/badge/React-18-149ECA?style=for-the-badge&logo=react&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![HackVision](https://img.shields.io/badge/HackVision-2.0-8B5CF6?style=for-the-badge)
+
+**🏫 University-wide data onboarding** · **📅 Conflict-aware scheduling** · **🧠 Explainable optimization** · **👩‍🎓 Student portal**
+
+[Overview](#-overview) • [Features](#-features) • [Workflow](#-how-it-works) • [Tech Stack](#-tech-stack) • [Quick Start](#-quick-start) • [Team](#-team-commit2win)
+
+</div>
 
 ---
-
 ## 🏛️ Executive Summary
 
 Universities conduct examinations for hundreds of courses, academic departments, student cohorts, and specialized venues. Preparing an examination timetable manually is an NP-complete Constraint Satisfaction Problem (CSP). In manual or naïve first-fit scheduling, student clashes occur across departments, rooms are underutilized or double-booked, specialized computer labs are misallocated, and administrative panic ensues whenever rooms or slots suddenly become unavailable.
@@ -187,8 +202,32 @@ When generating timetables:
 
 ---
 
-## 📜 Team Commit2Win — GLA HackVision 2.0
-- **Problem Statement:** C10 — ExamOpt: Intelligent Examination Timetable Optimization System
-- **Repository Type:** Full-Stack Production Monorepo
-- **Database Engine:** Native Relational SQLite (WAL Mode, `PRAGMA foreign_keys = ON`)
-- **Optimization Strategy:** Constraint Satisfaction Problem (MRV Backtracking + Baseline First-Fit Benchmark)
+## 👨‍💻 Team Commit2Win
+
+<div align="center">
+
+### Built together at GLA HackVision 2.0 🚀
+
+| Team Member | Contribution |
+|:---:|---|
+| **Praveen Gautam** | Team member · frontend/user experience and product presentation |
+| **Shorya** | Team member · development and integration |
+| **Vishaka** | Team member · development and testing |
+
+**Three collaborators. One mission: make university examination scheduling simpler, safer and smarter.**
+
+</div>
+
+> **Team contribution labels are illustrative based on discussion, not a verified final division of work.** Update roles to reflect each teammate's actual contribution before publishing.
+
+---
+
+<div align="center">
+
+### 💜 Made for GLA HackVision 2.0
+
+**Problem Statement C10 · Web Development · Algorithms · Optimization**
+
+**ExamOpt AI — One Import. Smarter Exams. Clearer Schedules.**
+
+</div>
